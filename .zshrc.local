@@ -1,0 +1,446 @@
+#!/bin/env zsh
+
+##-----------------------------------------------Ajustes---------------------------------------
+##-----------------------------------------------Ajustes---------------------------------------
+##-----------------------------------------------Ajustes---------------------------------------
+
+
+# Tu primera super modificacion informada pera el zshrc de grml
+# SIRVE PARA QUE el prompt 'PS1' se modifique cuando activaste un ambiente virtual 
+
+# 1/2 seteas un token para el tema de grml 
+# grml_theme_add_token VENV-ATILA '' '%F{green}(%f%F{blue}ven%f%F{green})%F{yellow}-%F{green}[%F{cyan}' '%f%F{green}]%f'
+grml_theme_add_token VENV-ATILA '' '%F{green}v(%f%F{cyan}' '%f%F{green})%f'
+
+# 2/2 modificas (sobre-esribes) la funcion que genera el prompt para el tema de grml 
+function prompt_grml_precmd () {
+    emulate -L zsh
+    local grmltheme=grml
+    local -a left_items right_items
+    if [ $VIRTUAL_ENV ]; then
+        grml_prompt_token_default[path]="%10<..<%~%<<"
+        # grml_prompt_token_default[VENV-ATILA]=${VIRTUAL_ENV:t}
+        grml_prompt_token_default[VENV-ATILA]=${${${VIRTUAL_ENV:t}/venv/}:0:4}
+        left_items=(rc VENV-ATILA change-root user at host path vcs percent)
+    else
+        grml_prompt_token_default[path]="%40<..<%~%<<"
+        left_items=(rc change-root user at host path vcs percent)
+    fi
+    right_items=(sad-smiley)
+
+    prompt_grml_precmd_worker
+}
+
+# Para cambiar el color cuando entras desde un ssh
+if [ $SSH_CLIENT ];then
+    zstyle ':prompt:grml:left:items:user' pre '%B%F{44}'
+    zstyle ':prompt:grml:left:items:at' pre '%F{43}'
+    zstyle ':prompt:grml:left:items:host' pre '%F{41}'
+    zstyle ':prompt:grml:left:items:path' pre '%B%F{159}'
+    #zstyle ':prompt:grml:left:items:at' token '@'
+    zstyle ':prompt:grml:left:items:user' pos '%f%b'
+    zstyle ':prompt:grml:left:items:at' pos '%f'
+    zstyle ':prompt:grml:left:items:host' pos '%f'
+    zstyle ':prompt:grml:left:items:path' pos '%f%b'
+fi
+
+grml_vcs_coloured_formats=(
+    format "${MAGENTA}(${NO_COLOR}%s${MAGENTA})${YELLOW}-${MAGENTA}[${GREEN}%b${MAGENTA}]${NO_COLOR} "
+    actionformat "${MAGENTA}(${NO_COLOR}%s${MAGENTA})${YELLOW}-${MAGENTA}[${GREEN}%b${YELLOW}|${RED}%a${MAGENTA}]${NO_COLOR} "
+    rev-branchformat "%b${RED}:${YELLOW}%r"
+)
+
+## --------------------------Tus SUPER FUNCIONES---comodas-practicas------------------------
+## --------------------------Tus SUPER FUNCIONES---comodas-practicas------------------------
+## --------------------------Tus SUPER FUNCIONES---comodas-practicas------------------------
+
+# Con este comando sacas la hora de internet o metes una manual 
+# para confygurar la fecha-hora de tu systema (para cuando se va la luz )
+function getreloj () {
+    local manual internet neto direccion hora_anterior hora_set hora_nueva
+    manual=0 internet=0 neto=0 direccion="www.google.com" hora_anterior=$(sudo hwclock -r)
+    while getopts ":hmisp" opt; do
+        case $opt in
+            m) manual=1;;
+            i) internet=1;;
+            s) neto=1;;
+            p) neto=2;;
+            h) <<__EOF0__
+getreloj,  getreloj [-h], getreloj [-s], getreloj [-s [-m | -i]] 
+getreloj [-m] [dd/mm/aaaa [hh:mm:ss]]
+getreloj [-i] [www.sitioconfiabledeinternet.com]
+
+Con este comando sacas la hora de internet y la seteas para el sorwere y para el hardwere
+  (tu laptop no tiene pila (seguramente tapoco la de litio) y cuando se va la luz pierdes la hora
+   y por ejepmplo firefox no logra funcionar si tu hora es rarísima) 
+
+Usage:
+-h                  Imprime esta ayuda
+-s                  Si esta activada aplica los cambios; si no, solo muestra lo que haria   
+-i <direccion web>  Introduce la direccion de internet donde sacar la hora.
+-m <fecha> <hora>   Introduce una fhecha y una hora... setea la fecha y la hora manualmente  
+
+EJEMPLO :
+ 
+ $>> getreloj -s -m 28/07/2020 13:44:12 
+
+va a ajustar la hora del hardwere y del softwere a esas que pongas... 
+Si omites la -s te muestra lo que HARÍA pero NO lo hace
+
+__EOF0__
+return 0;;
+            \?) getreloj -h >&2; return 1;;
+        esac
+    done
+    shift "$((OPTIND-1))" #este hace que el argumento $1 sea el de despues de las opciones
+        
+    echo "\nTu systema tiene actualmente configurada la fecha-hora como: $hora_anterior\n."
+    
+    if (( manual == 1)); then
+        local meses fechaIN=$1 horaIN=$2 dia mes año hor min seg
+        meses=('Jan' 'Feb' 'Mar' 'Apr' 'May' 'Jun' 'Jul' 'Aug' 'Sep' 'Oct' 'Nov' 'Dec')
+        
+        if (( ${#fechaIN} < 8 )) || [[ $fechaIN != *"/"* ]]; then
+            echo "--err-- Esribiste una fecha ¡INVALIDA!... Auto-set--> 27/08/2020"; fechaIN='27/8/2020'
+        fi
+        if (( ${#horaIN} < 8 )) || [[ ${#${horaIN//[!:]/}} != 2 ]]; then
+            echo "--err-- Esribiste una hora ¡INVALIDA!... Auto-set--> 12:00:00"; horaIN='12:00:00'
+        fi
+        dia=$(echo $fechaIN | awk 'BEGIN { FS = "/" } { print $1 }')
+        mes=$(echo $fechaIN | awk 'BEGIN { FS = "/" } { print $2 }')
+        mes=$meses[$mes]
+        año=$(echo $fechaIN | awk 'BEGIN { FS = "/" } { print $3 }')
+        hor=$(echo $horaIN | awk 'BEGIN { FS = ":" } { print $1 }')
+        min=$(echo $horaIN | awk 'BEGIN { FS = ":" } { print $2 }')
+        seg=$(echo $horaIN | awk 'BEGIN { FS = ":" } { print $3 }')
+        hora_set=$dia' '$mes' '$año' '$hor':'$min':'$seg
+        echo "..introduciste la fecha"
+        date -d "$hora_set"
+        if (( neto==1 ));then
+            echo "..configurandola en tu systema"
+            sudo date -s "$hora_set"
+            sudo hwclock -w
+        else
+            echo "..solo mostre lo que haria si agragas -s"
+        fi
+    else
+        if ((internet==1)); then
+            direccion=$1
+        fi
+        
+        local probandoNET=$(ping -c 1 -w 2 $direccion | awk '/tran/ {print $4}')
+        if [[ -z ${probandoNET} ]]; then
+            echo "\n--err--- ¡¡¡NO JALA EL INTERNET!!! \n--( prueba con otra direccion seria de internet
+    o tal vez no hay internet\n    prueba introduciendo una fecha manual)"
+            return 1
+        fi
+
+        echo "..preguntando la fecha-hora a la direccion $direccion "
+        hora_set=$(wget -qSO- --max-redirect=0 $direccion 2>&1 | grep Date: | cut -d' ' -f5-8)
+        echo "La direccion $direccion dijo que la fecha-hora es:\n$hora_set"
+        echo "Eso deve ser en LONDRES; en tu ZONA horaria deve ser:"
+        date -d "$hora_set""Z"
+        if (( neto==1 ));then
+            # sudo date -s "$(wget -qSO- --max-redirect=0 www.google.com.mx 2>&1 | grep Date: | cut -d' ' -f5-8)Z"
+            echo "..configurando en tu systema la fhecha-hora ajustada a la zona horaria"
+            sudo date -s "$(wget -qSO- --max-redirect=0 $direccion 2>&1 | grep Date: | cut -d' ' -f5-8)""Z"
+            sudo hwclock -w
+        else
+            echo "..lo anterior se configuraría en tu systema si agragas la opcion -s"
+        fi
+    fi
+    
+    echo ".\nTu systema tiene actualmente configurada la fecha-hora como: $(sudo hwclock -r)\n"
+
+    if (( neto==0 ));then
+        echo "\n--OJO-- ¡NADA SE MODIFICO! --> NO activaste la opcion  -s
+       (la diferencia en la hora final es solo lo que tardo este programita
+        para que se apliquen los cambios escribe -s despues de getreloj)"
+    fi
+}
+
+
+function bh_ayudante() {
+while read line;do
+    # echo ${line/*:0;/$(date --date @${line[@]:2:10})}
+    if [[ $line =~ ":0;" ]]; then
+        echo ${line/: *:0;/ $(date --date @$(echo $line | grep -o -E "[0-9]{10}") +%x%X)> }
+        # echo "$(date --date @${line[@]:2:10}) ${line[@]:15}"
+    else
+        echo "${line}"
+    fi
+    done
+}
+
+
+#Esta funcion sirve para buscar en tus historiales de comandos de comandos
+function bh () {
+    local dirs grepo grepo0 sedo 
+    dirs=(~/.bash_history ~/.zsh_history) grepo=(grep --colour=always -n) 
+    grepo0=(grep --colour=always) sedo=(sed -r "s/: [0123456789]{10}:0;/ /") 
+    
+    while getopts ":hoAEVOpysqtc" opt; do
+        case $opt in
+            E) grepo+=-E;;
+            V) grepo+=-v;;
+            O) grepo+=-o;;
+            A) grepo=(awk);;
+            o) dirs=(~/HomeAtilaParentUtil/.bash_history~ ~/HomeAtilaParentUtil/.bash_history ~/HomeAtilaParentUtil/.zsh_history);;
+            [py]) dirs=(~/HomeAtilaParentUtil/.python_history ~/.python_history)
+                  sedo=(cat);;
+            [sq]) dirs=(~/HomeAtilaParentUtil/.mysql_history ~/.mysql_history)
+                  sedo=(cat);;
+            t) sedo=(bh_ayudante);;
+            c) grepo0=(grep --colour=always -A $2 -B $3)
+               grepo=(grep --colour=always -n -A $2 -B $3)
+                shift "$((OPTIND-1+2))";;
+            # t) sedo=(awk -v awk_hr=$(echo $1) -F':0;' '{ print awk_hr,$2}');;
+            h) <<__EOF0__
+bh <string>,  bh [-o] <string>, bh [-E] <regex parameter>, bh [-A] <awk parameter>
+
+Con este comando buscas en tus archivos de historial de comandos
+
+Uso: -h (esta yuda)            -o (busca en antiguisimos)
+     -E (Utiliza regex)      -A (Utiliza awk)
+     -py (historia de python)  -sq (hystoria de mysql)
+__EOF0__
+return 0;;
+            \?) bh -h >&2; return 1;;
+        esac
+    done
+    shift "$((OPTIND-1))" #este hace que el argumento $1 sea el de despues de las opciones
+    
+    grepo+=$1 #tuviste que agregalo despes del recorrimiento pos opcion 
+
+    local execo='cat ${i} | ${grepo}'
+    
+    if (($#>1));then
+        for ii in "${@[@]:2}";do
+            execo+=' | ${grepo0} '$ii
+        done
+        # execo+=" | grep "${@[-1]}
+    fi
+    
+    for i in $dirs;do
+        echo "---------------------------------$i----------------------------------------"
+        eval $execo' | ${sedo}'
+    done
+
+    #     cat ~/.bash_history | grep -n -E $1
+    #     cat ~/.zsh_history | awk -F":0;" '{ print $2 }' | grep -n -E $1  
+    #     cat ~/.bash_history | cat -n | awk -F":0;" $1 | cat -n
+    #     cat ~/.zsh_history | awk -F":0;" '{ print $2 }' | awk -F":0;" $1 | cat -n  
+    #     # cat ~/.zsh_history | grep $1 | awk 'BEGIN { FS = ":0;" } { print $2 }'
+    #     # cat ~/.zsh_history | awk 'BEGIN { FS = ":0;" } /'$1'/ { print $2 }' | cat -n  
+    #     # cat ~/.zsh_history | awk -F":0;" '$2~/'$1'/{ print $2 }' | grep -n $1   
+    #     # cat ~/.zsh_history | awk -F":0;" '$2~/'$1'/{ print $2 }' | sed "s/ssh/\033[0;31mHello world\033[0m/"   
+    #     # cat ~/.zsh_history | awk -F":0;" '{print "\033[0;32m",$2,"\033[0m"}' 
+    #     # cat ~/.zsh_history | awk '{print $3!=".zshrc"}'
+    #     cat ~/.zsh_history | sed -r "s/: [0123456789]{10}:0;/ /" | grep -n $1
+
+}
+
+ph () {print -z $(sed "$1q;d" ~/.zsh_history | sed 's/:.*:0;//')}                                                            
+eh () {$(sed "$1q;d" ~/.zsh_history | sed 's/:.*:0;//')}
+
+function venvo () {
+    local inidir=~/Proyectos
+    while getopts ":habc" opt; do
+        case $opt in
+            a) echo a;;
+            b) echo b;;
+            c) echo c;;
+            h) <<__EOF0__
+prueba [-habc] FILE [FILE ...]
+bk -r [-av] [FILE [FILE ...]]
+No hace nada pes sirve solo de prueba
+
+Usage:
+-h    Display this help text
+-a    Remove all (even hidden) backups.
+-b    Printea b
+-c    Keep the file/folder as is, create a copy backup using cp(1) (default)
+
+The -c, -r and -m options are mutually exclusive. If specified at the same time,
+the last one is used.
+
+The return code is the sum of all cp/mv/rm return codes.
+__EOF0__
+return 0;;
+            \?) prueba -h >&2; return 1;;
+        esac
+    done
+    shift "$((OPTIND-1))" #este hace que el argumento $1 sea el de despues de la opcion 
+    
+    if [[ -z ${VIRTUAL_ENV+x} ]]; then
+        if (( ${#1} < 1 )); then
+            echo "...no hay ambientes activos..."   
+            echo "Si quieres activar uno; pon su nombre despues del comando"
+            return 0
+        fi
+    else 
+        echo "...el ambiente $VIRTUAL_ENV esta activo...\n...desactivando..."
+        deactivate
+        cd ~
+        echo "Ambiente desactivado"
+        if (( ${#1} < 1 )); then
+            return 0
+        fi
+    fi
+    
+    cd $inidir
+
+    if (( 1==2 ));then
+        echo "El proyecto $1 NO existe en ~/Proyectos."
+        echo "...¡¡nada coicidio o demaciodo coincidio!!...\n-En $inidir existen:"
+        ls -I "*.*" 
+        read iniputi
+        if [[ ! "noNO" == *"$iniputi"* ]]; then
+            mkdir $1
+            echo "...directorio $1 creado..."
+            local dironamo="$HOME/Proyectos/""$1"
+            cd "$dironamo"
+        else
+            echo "chao"
+            return 0
+        fi
+    fi
+
+    local proyec=$(ls -I "*.*" | grep $1)
+    echo "...escogi el proyecto >>>> --${proyec}--" 
+    if [[ -d $proyec ]]; then
+        local dironamo=$inidir"/"$proyec
+        cd "$proyec"
+    else
+        echo "...¡¡nada coiscidio o demasciado coincsidio!!...\n-En $inidir existen:\n"
+        ls -I "*.*"
+        echo " "
+        return 0
+    fi
+
+    local len_envs=$(ls | grep -c venv)
+    local namevenv=$(ls | grep venv)
+    local iniputi=$namevenv
+    if (($len_envs>1));then
+        echo "...el proyecto - ${proyec} - tiene $len_envs ambientes distintos:\n\n${namevenv}\n\n-Cual queres seleccionar?"
+        iniputi=$(ls | grep -m1 venv)
+        vared -p "???> " iniputi
+        namevenv=$(echo $namevenv | grep -m1 "${iniputi}")
+        echo "Introduciste ${iniputi}:\n... seleccion = ${namevenv:-"¡Ninguno!"} ..."
+    elif (($len_envs==0));then
+        echo "...en - ${dironamo} - no hay ambientes con 'venv' en el nobre...\n...bucando otros..."
+        local envs_patos=$(find -maxdepth 10 -name "pyvenv.cfg" -printf "%h\n")
+        local len_envs=$(echo $envs_patos | grep -c ".")
+        namevenv=$(echo $envs_patos | awk -F"/" '{print $NF}')
+        iniputi=$(echo $namevenv | grep -m1 "")
+        if (( $len_envs>1 ));then
+            echo "...se encontraron $len_envs ambientes en - ${proyec} -\n$envs_patos\n\n-Cual queres seleccionar?"
+            vared -p "???> " iniputi
+            echo "Introduciste ${iniputi}:\n... seleccion =:\n ${namevenv:-"¡Ninguno!"} ..."
+        fi
+        namevenv=s{$(echo $envs_patos | grep -m1 "${iniputi}")/./}
+        namevenv=$(echo $envs_patos | grep -m1 "${iniputi}")
+        namevenv=${namevenv[@]:2}
+    fi
+
+    local dironamo="$dironamo""/""$namevenv""/bin"
+    if [[ -d $dironamo ]]; then
+        echo "...el ambiente $namevenv existe..."
+        echo "..activando.."
+        source $dironamo"/activate"
+        echo "-------> Ambiente activado\n"
+        cd $dironamo;cd ..;cd ..
+    else
+        local uper1=$(echo $proyec | tr '[a-z]' '[A-Z]')
+        echo "... el proyecto - $proyec - NO TIENE NINGUN AMBIENTE ...\n-Qieres crear un eviroment?[y/n]>> "
+        read -q respu
+        if [[ $respu == "y" ]];then
+            dironamo="$HOME/Proyectos/$proyec/""venv""$uper1""/bin"
+            echo "buscando requerimientos huerfanos en $(pwd)"
+            local requ_patos=$(find -maxdepth 5 -name "requerimientos.txt" -printf "%h\n" -o -name "requirements.txt" -printf "%h\n")
+            local len_requ=$(echo $requ_patos | grep -c ".")
+            echo "requerimientos hurfanos = $requ_patos"
+            if (( $len_requ>0 ));then
+                local requeHuerf=1
+                local namebranch=$(echo $requ_patos | awk -F"/" '{print $NF}')
+                echo "Se encontraron requerimientos huerfanos en $namebranch"
+                if (( $len_requ>1 ));then
+                    iniputi=$(echo $namebranch | grep -m1 "")
+                    echo "...se encontraron $len_requ archivos de requerimiento - ${proyec} -\n$requ_patos\n\n-Cual queres seleccionar?"
+                    vared -p "???> " iniputi
+                    echo "Introduciste ${iniputi}:\n... seleccion =:\n ${namebranch:-"¡Ninguno!"} ..."
+                    namebranch=$(echo $requ_patos | grep -m1 "${iniputi}")
+                    namebranch=${namebranch[@]:2}
+                fi
+                dironamo="$HOME/Proyectos/$proyec/$namebranch/""venv""$uper1""/bin"
+                cd $namebranch
+            fi
+            echo "...creando ambiente venv$uper1 ..(espera)..."
+            python3 -m venv "venv$uper1"
+            echo "...ambiente venv$uper1 CREADO\n...activando..."
+            source $dironamo"/activate"
+            echo "----> Ambiente activado\n"
+            cd $dironamo;cd ..;cd ..
+            if (( ${requeHuerf:-0}==1 ));then
+                if [[ -f requerimientos.txt ]]; then
+                    pip install -r requerimientos.txt
+                fi
+                if [[ -f requirements.txt ]]; then
+                    pip install -r requirements.txt
+                fi
+            fi
+        else
+            echo "\n..Chao chiau ..\n"
+        fi
+    fi
+}
+
+
+
+function comandos () {
+    local lista
+    typeset -lA lista
+    lista=(
+getreloj "actualiza el relos del sytema y el del hardwre desde internet"
+bh       "busca en el historial de zsh bash y otros"
+venv     "activa y genera ambientes virtuales para python"
+        )
+    for key value in ${(kv)lista};do
+        echo "$key -->   $value"
+    done
+}
+
+
+function pruebaGenerica () {
+    while getopts ":habc" opt; do
+        case $opt in
+            a) echo a;;
+            b) echo b;;
+            c) echo c;;
+            h) <<__EOF0__
+prueba [-habc] FILE [FILE ...]
+bk -r [-av] [FILE [FILE ...]]
+No hace nada pes sirve solo de prueba
+
+Usage:
+-h    Display this help text
+-a    Remove all (even hidden) backups.
+-b    Printea b
+-c    Keep the file/folder as is, create a copy backup using cp(1) (default)
+
+The -c, -r and -m options are mutually exclusive. If specified at the same time,
+the last one is used.
+
+The return code is the sum of all cp/mv/rm return codes.
+__EOF0__
+return 0;;
+            \?) prueba -h >&2; return 1;;
+        esac
+    done
+    shift "$((OPTIND-1))" #este hace que el argumento $1 sea el de despues de la opcion 
+
+    echo No hice nada solo soy de prueva... esccribiste como argumento:
+    echo $1
+
+}
+
