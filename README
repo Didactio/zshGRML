@@ -1,0 +1,4 @@
+#Este es un repositorio que contiene mis archivos de configuracion zsh personlizados
+#si corres este LEEME.txt como programa syncronizas tus archivos dede este repo hacia tu compu 
+#RECUERDA que con un ls ESTA CARPETA SE VE VACIA PUES los dos archivos son ocultos asi que "ls -a" o "lh"
+echo "hola"
