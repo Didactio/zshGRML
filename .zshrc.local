@@ -179,11 +179,11 @@ function bh () {
     dirs=(~/.bash_history ~/.zsh_history) grepo=(grep --colour=always -n) 
     grepo0=(grep --colour=always) sedo=(sed -r "s/: [0123456789]{10}:0;/ /") 
     
-    while getopts ":hoAEVOpysqtc" opt; do
+    while getopts ":hoAE!Ipysqtc" opt; do
         case $opt in
             E) grepo+=-E;;
-            V) grepo+=-v;;
-            O) grepo+=-o;;
+            !) grepo+=-v;;
+            I) grepo+=-i;;
             A) grepo=(awk);;
             o) dirs=(~/HomeAtilaParentUtil/.bash_history~ ~/HomeAtilaParentUtil/.bash_history ~/HomeAtilaParentUtil/.zsh_history);;
             [py]) dirs=(~/HomeAtilaParentUtil/.python_history ~/.python_history)
@@ -200,9 +200,11 @@ bh <string>,  bh [-o] <string>, bh [-E] <regex parameter>, bh [-A] <awk paramete
 
 Con este comando buscas en tus archivos de historial de comandos
 
-Uso: -h (esta yuda)            -o (busca en antiguisimos)
-     -E (Utiliza regex)      -A (Utiliza awk)
-     -py (historia de python)  -sq (hystoria de mysql)
+Uso: -h (esta yuda)                      -o (busca en antiguisimos)
+     -! (Complement (primer argumento))  -I (No CaseSensitive)
+     -E (Utiliza regex)                  -A (Utiliza awk)
+     -t (Printea la fecha)               -c <n> <n> ( CONTEXTO <n ante> <n post>)
+     -py (historia de python)            -sq (hystoria de mysql)
 __EOF0__
 return 0;;
             \?) bh -h >&2; return 1;;
@@ -444,3 +446,11 @@ return 0;;
 
 }
 
+function crea () {
+    echo "Esta funcion esribio lo pertinente en tu porompt para crear un file con contenido rapido"
+    echo "1- Verifica el nombre del archivo que se creara en el directorio de trabajo actual despues de cat <<EOF >"
+    echo "2- Si es lo que querias preciona Preciona ENTER o modificalo y precion ENTER"
+    echo "3- Comienza a escribir el contenido del archihivo (escribe libremente incluso perionando enter)"
+    echo "Para Terminar y salir esribe la palbra majica EOF y lugo ENTER"
+    print -z "cat <<EOF > $1"
+}
